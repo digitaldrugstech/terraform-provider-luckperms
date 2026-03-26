@@ -113,6 +113,9 @@ func (r *GroupResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	name := plan.Name.ValueString()
 
+	unlock := r.client.LockGroup(name)
+	defer unlock()
+
 	// Create the group
 	_, err := r.client.CreateGroup(ctx, name)
 	if err != nil {
@@ -182,6 +185,9 @@ func (r *GroupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	name := plan.Name.ValueString()
+
+	unlock := r.client.LockGroup(name)
+	defer unlock()
 
 	// Read current nodes to preserve permission nodes from group_nodes resource
 	currentNodes, err := r.client.GetGroupNodes(ctx, name)

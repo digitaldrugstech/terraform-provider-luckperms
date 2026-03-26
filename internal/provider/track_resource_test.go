@@ -2,6 +2,10 @@ package provider_test
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -98,6 +102,86 @@ resource "luckperms_track" "test" {
 }
 `, track),
 				Check: resource.TestCheckResourceAttr("luckperms_track.test", "groups.#", "0"),
+			},
+		},
+	})
+}
+
+func TestAccTrackResource_ConflictError(t *testing.T) {
+	testAccPreCheck(t)
+	track := randomName("acc_trc")
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Pre-create the track via HTTP so Terraform hits a conflict on Create.
+				PreConfig: func() {
+					baseURL := os.Getenv("LUCKPERMS_BASE_URL")
+					body := fmt.Sprintf(`{"name":%q}`, track)
+					req, _ := http.NewRequest(http.MethodPost, baseURL+"/track", strings.NewReader(body))
+					req.Header.Set("Content-Type", "application/json")
+					if apiKey := os.Getenv("LUCKPERMS_API_KEY"); apiKey != "" {
+						req.Header.Set("Authorization", "Bearer "+apiKey)
+					}
+					resp, err := http.DefaultClient.Do(req)
+					if err != nil {
+						t.Fatalf("pre-create track failed: %v", err)
+					}
+					resp.Body.Close()
+				},
+				Config: fmt.Sprintf(`
+resource "luckperms_track" "conflict" {
+  name   = %q
+  groups = []
+}
+`, track),
+				ExpectError: regexp.MustCompile(`(?s)already exists`),
+			},
+		},
+	})
+}
+
+func TestAccTrackResource_DriftDetection(t *testing.T) {
+	testAccPreCheck(t)
+	track := randomName("acc_trd")
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create the track via Terraform.
+			{
+				Config: fmt.Sprintf(`
+resource "luckperms_track" "test" {
+  name   = %q
+  groups = []
+}
+`, track),
+				Check: resource.TestCheckResourceAttr("luckperms_track.test", "name", track),
+			},
+			// Delete externally, then plan — should detect drift.
+			{
+				PreConfig: func() {
+					baseURL := os.Getenv("LUCKPERMS_BASE_URL")
+					req, _ := http.NewRequest(http.MethodDelete, baseURL+"/track/"+track, nil)
+					if apiKey := os.Getenv("LUCKPERMS_API_KEY"); apiKey != "" {
+						req.Header.Set("Authorization", "Bearer "+apiKey)
+					}
+					resp, err := http.DefaultClient.Do(req)
+					if err != nil {
+						t.Fatalf("failed to delete track externally: %v", err)
+					}
+					resp.Body.Close()
+					if resp.StatusCode != 200 {
+						t.Fatalf("external delete returned %d, expected 200", resp.StatusCode)
+					}
+				},
+				Config: fmt.Sprintf(`
+resource "luckperms_track" "test" {
+  name   = %q
+  groups = []
+}
+`, track),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})

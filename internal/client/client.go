@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -17,6 +18,7 @@ type Client struct {
 	BaseURL    string
 	APIKey     string
 	HTTPClient *http.Client
+	groupMu    sync.Map // map[string]*sync.Mutex — per-group lock for read-merge-write
 }
 
 // New creates a new LuckPerms API client.
@@ -43,6 +45,15 @@ func New(baseURL, apiKey string, timeout time.Duration, insecure bool) *Client {
 	}
 }
 
+// LockGroup acquires a per-group mutex for read-merge-write operations.
+// Returns an unlock function.
+func (c *Client) LockGroup(groupName string) func() {
+	val, _ := c.groupMu.LoadOrStore(groupName, &sync.Mutex{})
+	mu := val.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
+}
+
 // APIError represents an error response from the LuckPerms REST API.
 type APIError struct {
 	StatusCode int
@@ -52,7 +63,11 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string {
-	return fmt.Sprintf("luckperms api: %s %s returned %d: %s", e.Method, e.Path, e.StatusCode, e.Body)
+	body := e.Body
+	if len(body) > 200 {
+		body = body[:200] + "..."
+	}
+	return fmt.Sprintf("luckperms api: %s %s returned %d: %s", e.Method, e.Path, e.StatusCode, body)
 }
 
 // IsNotFound returns true if the error (or any wrapped error) is a 404 response.

@@ -137,6 +137,9 @@ func (r *GroupNodesResource) Create(ctx context.Context, req resource.CreateRequ
 
 	groupName := plan.Group.ValueString()
 
+	unlock := r.client.LockGroup(groupName)
+	defer unlock()
+
 	// Read existing nodes to preserve meta nodes from group resource
 	currentNodes, nodeErr := r.client.GetGroupNodes(ctx, groupName)
 	if nodeErr != nil {
@@ -197,6 +200,9 @@ func (r *GroupNodesResource) Update(ctx context.Context, req resource.UpdateRequ
 	apiNodes := util.ModelsToAPINodes(plan.Nodes)
 	groupName := plan.Group.ValueString()
 
+	unlock := r.client.LockGroup(groupName)
+	defer unlock()
+
 	// Read current nodes to preserve meta nodes from group resource
 	currentNodes, err := r.client.GetGroupNodes(ctx, groupName)
 	if err != nil {
@@ -224,6 +230,9 @@ func (r *GroupNodesResource) Delete(ctx context.Context, req resource.DeleteRequ
 	}
 
 	groupName := state.Group.ValueString()
+
+	unlock := r.client.LockGroup(groupName)
+	defer unlock()
 
 	// Read current nodes to preserve meta nodes from group resource
 	currentNodes, err := r.client.GetGroupNodes(ctx, groupName)

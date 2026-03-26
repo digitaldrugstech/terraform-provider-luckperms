@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -83,6 +84,15 @@ func (p *LuckPermsProvider) Configure(ctx context.Context, req provider.Configur
 		resp.Diagnostics.AddError(
 			"Missing base_url",
 			"Set base_url in the provider configuration or the LUCKPERMS_BASE_URL environment variable.",
+		)
+		return
+	}
+
+	parsedURL, parseErr := url.Parse(baseURL)
+	if parseErr != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+		resp.Diagnostics.AddError(
+			"Invalid base_url",
+			"base_url must be a valid http or https URL, got: "+baseURL,
 		)
 		return
 	}
