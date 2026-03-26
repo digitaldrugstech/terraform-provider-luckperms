@@ -308,6 +308,30 @@ func TestFindDuplicateNodes_SameKeyDifferentValue(t *testing.T) {
 	}
 }
 
+func TestNormalizeNodes_Empty(t *testing.T) {
+	if result := NormalizeNodes(nil); len(result) != 0 {
+		t.Errorf("expected empty result for nil input, got %v", result)
+	}
+	if result := NormalizeNodes([]client.Node{}); len(result) != 0 {
+		t.Errorf("expected empty result for empty slice, got %v", result)
+	}
+}
+
+func TestNodesEqual_BothNil(t *testing.T) {
+	if !NodesEqual(nil, nil) {
+		t.Error("nil == nil should be true")
+	}
+}
+
+func TestNodesEqual_NilVsEmpty(t *testing.T) {
+	if !NodesEqual(nil, []client.Node{}) {
+		t.Error("nil == [] should be true")
+	}
+	if !NodesEqual([]client.Node{}, nil) {
+		t.Error("[] == nil should be true")
+	}
+}
+
 func TestNormalizeNodes_Unicode(t *testing.T) {
 	nodes := []client.Node{
 		{Key: "displayname.Администрация", Value: true},

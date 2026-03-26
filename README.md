@@ -58,7 +58,6 @@ resource "luckperms_group_nodes" "admin" {
 resource "luckperms_track" "staff" {
   name   = "staff"
   groups = [
-    luckperms_group.helper.name,
     luckperms_group.admin.name,
   ]
 }

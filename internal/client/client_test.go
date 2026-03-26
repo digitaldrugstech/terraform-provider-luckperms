@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -331,5 +332,204 @@ func TestNew(t *testing.T) {
 	}
 	if c.HTTPClient.Timeout != 10*time.Second {
 		t.Error("wrong timeout")
+	}
+}
+
+func TestDeleteGroup(t *testing.T) {
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "DELETE" || r.URL.Path != "/group/testgroup" {
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		w.WriteHeader(200)
+	}))
+
+	if err := c.DeleteGroup(context.Background(), "testgroup"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDeleteGroup_NotFound(t *testing.T) {
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(404)
+		w.Write([]byte("Not found"))
+	}))
+
+	err := c.DeleteGroup(context.Background(), "missing")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !IsNotFound(err) {
+		t.Errorf("expected IsNotFound, got %v", err)
+	}
+}
+
+func TestGetGroupNodes(t *testing.T) {
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" || r.URL.Path != "/group/admin/nodes" {
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		json.NewEncoder(w).Encode([]Node{
+			{Key: "perm.a", Value: true},
+			{Key: "perm.b", Value: false},
+		})
+	}))
+
+	nodes, err := c.GetGroupNodes(context.Background(), "admin")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(nodes) != 2 {
+		t.Fatalf("expected 2 nodes, got %d", len(nodes))
+	}
+	if nodes[0].Key != "perm.a" || !nodes[0].Value {
+		t.Errorf("unexpected node 0: %+v", nodes[0])
+	}
+	if nodes[1].Key != "perm.b" || nodes[1].Value {
+		t.Errorf("unexpected node 1: %+v", nodes[1])
+	}
+}
+
+func TestGetTracks(t *testing.T) {
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" || r.URL.Path != "/track" {
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		json.NewEncoder(w).Encode([]string{"staff", "vip"})
+	}))
+
+	tracks, err := c.GetTracks(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(tracks) != 2 || tracks[0] != "staff" || tracks[1] != "vip" {
+		t.Errorf("unexpected tracks: %v", tracks)
+	}
+}
+
+func TestGetTrack(t *testing.T) {
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" || r.URL.Path != "/track/staff" {
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		json.NewEncoder(w).Encode(Track{Name: "staff", Groups: []string{"helper", "mod", "admin"}})
+	}))
+
+	track, err := c.GetTrack(context.Background(), "staff")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if track.Name != "staff" {
+		t.Errorf("expected name staff, got %s", track.Name)
+	}
+	if len(track.Groups) != 3 || track.Groups[0] != "helper" {
+		t.Errorf("unexpected groups: %v", track.Groups)
+	}
+}
+
+func TestGetTrack_NotFound(t *testing.T) {
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(404)
+		w.Write([]byte("Not found"))
+	}))
+
+	_, err := c.GetTrack(context.Background(), "missing")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !IsNotFound(err) {
+		t.Errorf("expected IsNotFound, got %v", err)
+	}
+}
+
+func TestUpdateTrack(t *testing.T) {
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PATCH" || r.URL.Path != "/track/staff" {
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		var req updateTrackRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode body: %v", err)
+		}
+		if len(req.Groups) != 2 || req.Groups[0] != "helper" || req.Groups[1] != "mod" {
+			t.Errorf("unexpected groups in body: %v", req.Groups)
+		}
+		w.WriteHeader(200)
+	}))
+
+	if err := c.UpdateTrack(context.Background(), "staff", []string{"helper", "mod"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDeleteTrack(t *testing.T) {
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "DELETE" || r.URL.Path != "/track/staff" {
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		w.WriteHeader(200)
+	}))
+
+	if err := c.DeleteTrack(context.Background(), "staff"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCreateTrack_PatchFails_CleanupSucceeds(t *testing.T) {
+	// Use 400 on PATCH to avoid the retry loop (only 5xx triggers retries).
+	// Sequence: POST 200 → PATCH 400 → DELETE 200 → error contains "cleaned up".
+	var methods []string
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		methods = append(methods, r.Method)
+		switch r.Method {
+		case "POST":
+			json.NewEncoder(w).Encode(Track{Name: "staff"})
+		case "PATCH":
+			w.WriteHeader(400)
+			w.Write([]byte("bad request"))
+		case "DELETE":
+			w.WriteHeader(200)
+		default:
+			t.Errorf("unexpected method %s", r.Method)
+			w.WriteHeader(500)
+		}
+	}))
+
+	_, err := c.CreateTrack(context.Background(), "staff", []string{"helper"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "cleaned up") {
+		t.Errorf("expected 'cleaned up' in error, got: %v", err)
+	}
+	if strings.Contains(err.Error(), "cleanup also failed") {
+		t.Errorf("unexpected 'cleanup also failed' in error: %v", err)
+	}
+}
+
+func TestCreateTrack_PatchFails_CleanupFails(t *testing.T) {
+	// Use 400 on both PATCH and DELETE to avoid retry loops.
+	// Sequence: POST 200 → PATCH 400 → DELETE 400 → error contains "cleanup also failed".
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "POST":
+			json.NewEncoder(w).Encode(Track{Name: "staff"})
+		case "PATCH":
+			w.WriteHeader(400)
+			w.Write([]byte("patch error"))
+		case "DELETE":
+			w.WriteHeader(400)
+			w.Write([]byte("delete error"))
+		default:
+			t.Errorf("unexpected method %s", r.Method)
+			w.WriteHeader(500)
+		}
+	}))
+
+	_, err := c.CreateTrack(context.Background(), "staff", []string{"helper"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "cleanup also failed") {
+		t.Errorf("expected 'cleanup also failed' in error, got: %v", err)
 	}
 }

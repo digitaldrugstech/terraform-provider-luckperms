@@ -136,7 +136,7 @@ Each `context` block (within a node) defines a server/world context:
 - `key` (String, Required) - Context key. Examples: `server`, `world`, `dimension`.
 - `value` (String, Required) - Context value. Examples: `survival`, `creative`, `main-world`.
 
-Multiple contexts within a single node represent OR semantics (the permission applies if any context matches).
+Multiple contexts with the same key within a single node represent OR semantics (e.g., server=creative-build OR server=creative-infrastructure). Different context keys represent AND semantics (e.g., server=survival AND world=nether — both must match).
 
 ## Attributes Reference
 

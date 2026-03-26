@@ -72,6 +72,9 @@ resource "luckperms_group_nodes" "vip_temporary" {
   node {
     key    = "vip.bonus_claim_blocks"
     value  = true
+    # WARNING: Static timestamps in Terraform cause perpetual drift once expired.
+    # Temporary permissions are better managed outside Terraform (web editor, API, commands).
+    # This example is for illustration only.
     expiry = 1704067200  # 2024-01-01T00:00:00Z
   }
 

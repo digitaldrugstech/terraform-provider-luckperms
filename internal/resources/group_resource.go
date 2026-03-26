@@ -71,18 +71,30 @@ func (r *GroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:    true,
 			},
 			"weight": schema.Int64Attribute{
-				Description: "Group weight/priority. Stored as weight.{value} node. Default: 0.",
+				Description: "Group weight/priority. Higher weight takes precedence when a player has multiple groups. Stored as weight.{value} node. Default: 0.",
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(0),
 			},
 			"prefix": schema.StringAttribute{
-				Description: "Chat prefix in format {priority}.{text}. Example: \"100.<#f1c40f>⭐\".",
+				Description: "Chat prefix in format {priority}.{text}. Priority determines which group's prefix displays when a player has multiple groups. Example: \"100.<#f1c40f>⭐\". Uses MiniMessage formatting.",
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^\d+\.`),
+						"must start with a numeric priority followed by a dot (e.g., '100.<red>star')",
+					),
+				},
 			},
 			"suffix": schema.StringAttribute{
 				Description: "Chat suffix in format {priority}.{text}.",
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^\d+\.`),
+						"must start with a numeric priority followed by a dot (e.g., '100.<red>star')",
+					),
+				},
 			},
 		},
 	}
@@ -116,7 +128,11 @@ func (r *GroupResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Read existing nodes (may have perm nodes from external sources), merge meta on top
-	currentNodes, _ := r.client.GetGroupNodes(ctx, name)
+	currentNodes, err := r.client.GetGroupNodes(ctx, name)
+	if err != nil && !client.IsNotFound(err) {
+		resp.Diagnostics.AddError("Error reading current nodes after group creation", err.Error())
+		return
+	}
 	_, permNodes := util.SplitNodes(currentNodes)
 	metaNodes := buildMetaNodesFromPlan(&plan)
 	merged := util.MergeNodes(metaNodes, permNodes)

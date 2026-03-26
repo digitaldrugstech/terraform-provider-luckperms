@@ -134,7 +134,10 @@ This creates `.tf` files for all groups, tracks, and their nodes.
 
 ### Import Workflow
 
-Import individual resources:
+After generating `.tf` files with the generate tool, import them into Terraform state:
+
+1. Write the `.tf` resource blocks (from generate tool output or manually)
+2. Run `terraform import` for each resource:
 
 ```bash
 # Import a group and its metadata
@@ -147,4 +150,10 @@ terraform import luckperms_group_nodes.admin admin
 terraform import luckperms_track.staff staff
 ```
 
-Then update your `.tf` files to match the imported resources.
+3. Run `terraform plan` to verify no changes are needed
+
+The resource blocks must exist in your `.tf` files before importing.
+
+## Security Considerations
+
+The `api_key` provider attribute is marked as sensitive and will be redacted in plan/apply output. However, it is stored in plaintext in Terraform state files. Use remote state backends with encryption (Terraform Cloud, S3+KMS, etc.) and never commit `.tfstate` files to version control.

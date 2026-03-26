@@ -9,6 +9,9 @@ import (
 )
 
 // metaPrefixes are node key prefixes owned by luckperms_group resource.
+// Note: LuckPerms also supports meta.{key} nodes (from /lp group meta set).
+// These are NOT managed by the provider — they pass through as permission nodes
+// in luckperms_group_nodes. This is a known limitation.
 var metaPrefixes = []string{"displayname.", "weight.", "prefix.", "suffix."}
 
 // IsMetaNode returns true if the node key is a meta node

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 )
 
 // GetTracks returns all track names.
@@ -22,7 +23,7 @@ func (c *Client) GetTracks(ctx context.Context) ([]string, error) {
 
 // GetTrack returns a single track by name.
 func (c *Client) GetTrack(ctx context.Context, name string) (*Track, error) {
-	body, err := c.doRequest(ctx, "GET", "/track/"+name, nil)
+	body, err := c.doRequest(ctx, "GET", "/track/"+url.PathEscape(name), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -59,10 +60,10 @@ func (c *Client) CreateTrack(ctx context.Context, name string, groups []string) 
 
 // UpdateTrack updates the groups of an existing track.
 func (c *Client) UpdateTrack(ctx context.Context, name string, groups []string) error {
-	return c.doRequestNoBody(ctx, "PATCH", "/track/"+name, updateTrackRequest{Groups: groups})
+	return c.doRequestNoBody(ctx, "PATCH", "/track/"+url.PathEscape(name), updateTrackRequest{Groups: groups})
 }
 
 // DeleteTrack deletes a track by name.
 func (c *Client) DeleteTrack(ctx context.Context, name string) error {
-	return c.doRequestNoBody(ctx, "DELETE", "/track/"+name, nil)
+	return c.doRequestNoBody(ctx, "DELETE", "/track/"+url.PathEscape(name), nil)
 }

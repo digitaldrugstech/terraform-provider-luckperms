@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 )
 
 // GetGroups returns all group names.
@@ -22,7 +23,7 @@ func (c *Client) GetGroups(ctx context.Context) ([]string, error) {
 
 // GetGroup returns a single group by name.
 func (c *Client) GetGroup(ctx context.Context, name string) (*Group, error) {
-	body, err := c.doRequest(ctx, "GET", "/group/"+name, nil)
+	body, err := c.doRequest(ctx, "GET", "/group/"+url.PathEscape(name), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -46,12 +47,12 @@ func (c *Client) CreateGroup(ctx context.Context, name string) (*Group, error) {
 
 // DeleteGroup deletes a group by name.
 func (c *Client) DeleteGroup(ctx context.Context, name string) error {
-	return c.doRequestNoBody(ctx, "DELETE", "/group/"+name, nil)
+	return c.doRequestNoBody(ctx, "DELETE", "/group/"+url.PathEscape(name), nil)
 }
 
 // GetGroupNodes returns all nodes for a group.
 func (c *Client) GetGroupNodes(ctx context.Context, groupName string) ([]Node, error) {
-	body, err := c.doRequest(ctx, "GET", "/group/"+groupName+"/nodes", nil)
+	body, err := c.doRequest(ctx, "GET", "/group/"+url.PathEscape(groupName)+"/nodes", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -80,5 +81,5 @@ func (c *Client) SetGroupNodes(ctx context.Context, groupName string, nodes []No
 		}
 	}
 
-	return c.doRequestNoBody(ctx, "PUT", "/group/"+groupName+"/nodes", cleanNodes)
+	return c.doRequestNoBody(ctx, "PUT", "/group/"+url.PathEscape(groupName)+"/nodes", cleanNodes)
 }

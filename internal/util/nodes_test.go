@@ -196,6 +196,19 @@ func TestBuildMetaNodes_Unicode(t *testing.T) {
 	}
 }
 
+func TestParseMetaNodes_DuplicateTakesFirst(t *testing.T) {
+	nodes := []client.Node{
+		{Key: "displayname.FirstName", Value: true},
+		{Key: "displayname.SecondName", Value: true},
+	}
+
+	attrs := ParseMetaNodes(nodes)
+
+	if attrs.DisplayName != "FirstName" {
+		t.Errorf("expected first displayname to win, got %q", attrs.DisplayName)
+	}
+}
+
 func TestMergeNodes(t *testing.T) {
 	meta := []client.Node{
 		{Key: "weight.100", Value: true},

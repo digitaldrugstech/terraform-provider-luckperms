@@ -49,6 +49,25 @@ func TestModelsToAPINodes(t *testing.T) {
 	}
 }
 
+func TestModelsToAPINodes_UnknownExpiry(t *testing.T) {
+	models := []NodeModel{
+		{
+			Key:    types.StringValue("perm.a"),
+			Value:  types.BoolValue(true),
+			Expiry: types.Int64Unknown(),
+		},
+	}
+
+	nodes := ModelsToAPINodes(models)
+
+	if len(nodes) != 1 {
+		t.Fatalf("expected 1 node, got %d", len(nodes))
+	}
+	if nodes[0].Expiry != nil {
+		t.Errorf("expected nil Expiry for unknown TF value, got %v", nodes[0].Expiry)
+	}
+}
+
 func TestAPINodeToModels(t *testing.T) {
 	exp := int64(100)
 	nodes := []client.Node{

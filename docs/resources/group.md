@@ -75,6 +75,8 @@ terraform import luckperms_group.admin admin
 
 **Default Group**: The default group cannot be deleted. Terraform will skip deletion if the group name is "default".
 
+~> **Warning:** When removing the `default` group from Terraform config, Terraform will remove it from state but the group will continue to exist in LuckPerms. The next `terraform plan` will show it as needing creation.
+
 **Coordination with group_nodes**: The `luckperms_group` and `luckperms_group_nodes` resources work together:
 - `luckperms_group` manages meta nodes (displayname, weight, prefix, suffix)
 - `luckperms_group_nodes` manages permission and inheritance nodes
