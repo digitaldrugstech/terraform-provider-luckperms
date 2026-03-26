@@ -1,0 +1,23 @@
+# Binaries
+terraform-provider-luckperms
+generate
+*.exe
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Test
+*.test
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# Generated
+/dist/

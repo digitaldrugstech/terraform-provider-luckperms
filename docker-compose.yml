@@ -1,0 +1,8 @@
+services:
+  luckperms:
+    image: ghcr.io/luckperms/rest-api
+    ports:
+      - "9094:8080"
+    environment:
+      LUCKPERMS_STORAGE_METHOD: h2
+      LUCKPERMS_REST_AUTH: "false"

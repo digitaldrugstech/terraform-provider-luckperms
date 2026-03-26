@@ -2,15 +2,20 @@
 
 Terraform provider for managing [LuckPerms](https://luckperms.net/) permissions, groups, and tracks via the [LuckPerms REST API](https://github.com/LuckPerms/rest-api).
 
-> **Status:** In development. Not yet published to the Terraform Registry.
+**Status:** Production-ready. Not yet published to the Terraform Registry.
 
-## Overview
-
-Manage your Minecraft server permissions as Infrastructure as Code:
+## Quick Start
 
 ```hcl
+provider "luckperms" {
+  base_url = "http://localhost:8080"
+}
+
 resource "luckperms_group" "admin" {
-  name = "admin"
+  name         = "admin"
+  display_name = "Администрация"
+  weight       = 100
+  prefix       = "100.<#f1c40f>⭐"
 }
 
 resource "luckperms_group_nodes" "admin" {
@@ -22,36 +27,29 @@ resource "luckperms_group_nodes" "admin" {
   }
 
   node {
-    key   = "prefix.100.<#f1c40f>★"
-    value = true
-  }
-
-  node {
-    key   = "displayname.Admin"
-    value = true
-  }
-
-  node {
-    key   = "weight.500"
+    key   = "group.moderator"
     value = true
   }
 }
 
 resource "luckperms_track" "staff" {
   name   = "staff"
-  groups = ["helper", "admin", "superadmin"]
+  groups = [
+    luckperms_group.moderator.name,
+    luckperms_group.admin.name,
+  ]
 }
 ```
 
 ## Resources
 
-- `luckperms_group` — Create and manage groups
-- `luckperms_group_nodes` — Manage permissions, inheritance, prefixes, and metadata for a group
+- `luckperms_group` — Create and manage group identity (display name, weight, prefix, suffix)
+- `luckperms_group_nodes` — Manage permissions and inheritance nodes for a group
 - `luckperms_track` — Manage promotion/demotion tracks
 
 ## Data Sources
 
-- `luckperms_group` / `luckperms_groups` — Read group data
+- `luckperms_group` / `luckperms_groups` — Read group metadata and nodes
 - `luckperms_track` / `luckperms_tracks` — Read track data
 
 ## Requirements
@@ -73,6 +71,8 @@ Environment variables: `LUCKPERMS_BASE_URL`, `LUCKPERMS_API_KEY`.
 
 ## Development
 
+### Build
+
 ```bash
 make build        # Build provider binary
 make test         # Run unit tests
@@ -81,7 +81,55 @@ make generate     # Generate docs
 make fmt          # Format code
 ```
 
-See [SPEC.md](SPEC.md) for the full technical specification.
+### Local Testing Setup
+
+Use dev_overrides in `~/.terraformrc` to test against a local binary:
+
+```hcl
+provider_installation {
+  dev_overrides {
+    "digitaldrugstech/luckperms" = "/path/to/go/bin"
+  }
+  direct {}
+}
+```
+
+Build and place the provider:
+
+```bash
+make build
+# Binary output at: ./bin/terraform-provider-luckperms
+# Copy to: $(go env GOPATH)/bin/
+```
+
+### Docker Compose
+
+Run LuckPerms API locally:
+
+```bash
+docker-compose up -d
+```
+
+This starts:
+- LuckPerms REST API on `http://localhost:8080`
+- PostgreSQL on `localhost:5432`
+
+### Generate Tool
+
+Bootstrap Terraform configuration from existing LuckPerms state:
+
+```bash
+go run ./tools/generate \
+  --url http://localhost:8080 \
+  --api-key optional-key \
+  --output ./generated/
+```
+
+This creates `.tf` files with all current groups, permissions, and tracks.
+
+## Resources
+
+See [docs/](docs/) for detailed resource and data source documentation.
 
 ## License
 

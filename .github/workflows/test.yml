@@ -1,0 +1,62 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go build -v ./...
+      - run: go vet ./...
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go test ./internal/... -v -count=1
+
+  acceptance:
+    runs-on: ubuntu-latest
+    services:
+      luckperms:
+        image: ghcr.io/luckperms/rest-api
+        ports:
+          - 8080:8080
+        env:
+          LUCKPERMS_STORAGE_METHOD: h2
+          LUCKPERMS_REST_AUTH: "false"
+        options: >-
+          --health-cmd "curl -sf http://localhost:8080/group || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+          --health-start-period 10s
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Wait for LuckPerms API
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/group && break
+            echo "Waiting for LuckPerms API... ($i)"
+            sleep 2
+          done
+      - run: TF_ACC=1 go test ./internal/... -v -timeout 30m -count=1
+        env:
+          LUCKPERMS_BASE_URL: http://localhost:8080
