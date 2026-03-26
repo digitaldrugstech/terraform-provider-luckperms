@@ -1,12 +1,35 @@
-# terraform-provider-luckperms
+<p align="center">
+  <img src="https://luckperms.net/assets/logo.svg" alt="LuckPerms" width="80" height="80">
+  <br>
+  <strong>Terraform Provider for LuckPerms</strong>
+  <br>
+  Declarative management of Minecraft server permissions via Infrastructure as Code.
+</p>
 
-Terraform provider for managing [LuckPerms](https://luckperms.net/) permissions, groups, and tracks via the [LuckPerms REST API](https://github.com/LuckPerms/rest-api).
+<p align="center">
+  <a href="https://github.com/digitaldrugstech/terraform-provider-luckperms/actions"><img src="https://github.com/digitaldrugstech/terraform-provider-luckperms/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/digitaldrugstech/terraform-provider-luckperms/releases"><img src="https://img.shields.io/github/v/release/digitaldrugstech/terraform-provider-luckperms" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/digitaldrugstech/terraform-provider-luckperms" alt="License"></a>
+</p>
 
-**Status:** Production-ready. Not yet published to the Terraform Registry.
+---
+
+Manage [LuckPerms](https://luckperms.net/) groups, permissions, tracks, and metadata through Terraform. Review permission changes in PRs, detect drift with `terraform plan`, roll back with `git revert`.
 
 ## Quick Start
 
 ```hcl
+terraform {
+  required_version = ">= 1.9"
+
+  required_providers {
+    luckperms = {
+      source  = "digitaldrugstech/luckperms"
+      version = "~> 0.1"
+    }
+  }
+}
+
 provider "luckperms" {
   base_url = "http://localhost:8080"
 }
@@ -14,76 +37,129 @@ provider "luckperms" {
 resource "luckperms_group" "admin" {
   name         = "admin"
   display_name = "Администрация"
-  weight       = 100
+  weight       = 500
   prefix       = "100.<#f1c40f>⭐"
 }
 
 resource "luckperms_group_nodes" "admin" {
   group = luckperms_group.admin.name
 
-  node {
-    key   = "*"
-    value = true
-  }
+  node { key = "*" }
+  node { key = "luckperms.autoop" }
+  node { key = "handcuffs.bypass" }
+  node { key = "sayanvanish.*" }
 
   node {
-    key   = "group.moderator"
-    value = true
+    key   = "vulcan.bypass.*"
+    value = false
   }
 }
 
 resource "luckperms_track" "staff" {
   name   = "staff"
   groups = [
-    luckperms_group.moderator.name,
+    luckperms_group.helper.name,
     luckperms_group.admin.name,
   ]
 }
 ```
 
-## Resources
+## Resources and Data Sources
 
-- `luckperms_group` — Create and manage group identity (display name, weight, prefix, suffix)
-- `luckperms_group_nodes` — Manage permissions and inheritance nodes for a group
-- `luckperms_track` — Manage promotion/demotion tracks
+### Resources
 
-## Data Sources
+| Resource | Description |
+|----------|-------------|
+| `luckperms_group` | Group identity and meta attributes (display name, weight, prefix, suffix) |
+| `luckperms_group_nodes` | Permission and inheritance nodes for a group |
+| `luckperms_track` | Promotion/demotion track through groups |
 
-- `luckperms_group` / `luckperms_groups` — Read group metadata and nodes
-- `luckperms_track` / `luckperms_tracks` — Read track data
+### Data Sources
 
-## Requirements
+| Data Source | Description |
+|-------------|-------------|
+| `luckperms_group` | Read a single group with all metadata and nodes |
+| `luckperms_groups` | List all group names |
+| `luckperms_track` | Read a single track |
+| `luckperms_tracks` | List all track names |
 
-- Terraform >= 1.9
-- Go >= 1.23 (for building)
-- [LuckPerms REST API](https://github.com/LuckPerms/rest-api) running and accessible
+## How It Works
+
+The provider splits LuckPerms node management between two resources:
+
+- **`luckperms_group`** owns meta nodes: `displayname.*`, `weight.*`, `prefix.*`, `suffix.*`
+- **`luckperms_group_nodes`** owns everything else: permissions, inheritance (`group.*`), contexts
+
+Both resources coordinate through a read-merge-write pattern against the same `PUT /group/{name}/nodes` endpoint. When one updates, it preserves the other's nodes.
+
+```
+luckperms_group "admin"         luckperms_group_nodes "admin"
+  display_name = "Admin"           node { key = "*" }
+  weight       = 500               node { key = "group.helper" }
+  prefix       = "100.<red>★"      node { key = "vulcan.bypass.*", value = false }
+       |                                    |
+       +------------- PUT /group/admin/nodes (merged) -----------+
+```
 
 ## Provider Configuration
 
 ```hcl
 provider "luckperms" {
-  base_url = "http://localhost:8080"  # LuckPerms REST API URL
-  api_key  = ""                       # Optional: API key if auth is enabled
+  base_url = "http://localhost:8080"   # Required (or LUCKPERMS_BASE_URL env)
+  api_key  = ""                        # Optional (or LUCKPERMS_API_KEY env)
+  timeout  = 30                        # Optional, seconds
+  insecure = false                     # Optional, skip TLS verify
 }
 ```
 
-Environment variables: `LUCKPERMS_BASE_URL`, `LUCKPERMS_API_KEY`.
+## Migrating Existing Permissions
+
+Bootstrap `.tf` files from your current LuckPerms state:
+
+```bash
+go run ./tools/generate \
+  --url http://your-luckperms-api:8080 \
+  --output ./luckperms/
+```
+
+This generates `groups.tf`, `group_nodes.tf`, and `tracks.tf` with resource references. Then import into Terraform state:
+
+```bash
+terraform import luckperms_group.admin admin
+terraform import luckperms_group_nodes.admin admin
+terraform import luckperms_track.staff staff
+```
+
+Verify with `terraform plan` -- should show no changes if generated config matches prod.
 
 ## Development
 
-### Build
+### Prerequisites
+
+- Go >= 1.23
+- Docker (for acceptance tests)
+
+### Commands
 
 ```bash
-make build        # Build provider binary
-make test         # Run unit tests
-make testacc      # Run acceptance tests (requires Docker)
-make generate     # Generate docs
-make fmt          # Format code
+make build       # Compile provider binary
+make test        # Unit tests
+make testacc     # Acceptance tests (requires running LuckPerms API)
+make fmt         # Format code
+make vet         # Lint
 ```
 
-### Local Testing Setup
+### Local LuckPerms API
 
-Use dev_overrides in `~/.terraformrc` to test against a local binary:
+```bash
+docker compose up -d    # Starts LP REST API on localhost:9094 (H2 in-memory)
+make testacc            # Run tests against it
+docker compose down
+```
+
+### Local Provider Testing
+
+Add to `~/.terraformrc`:
 
 ```hcl
 provider_installation {
@@ -94,43 +170,12 @@ provider_installation {
 }
 ```
 
-Build and place the provider:
+Then `go install` and use normally with `terraform plan`/`apply`.
 
-```bash
-make build
-# Binary output at: ./bin/terraform-provider-luckperms
-# Copy to: $(go env GOPATH)/bin/
-```
+## Documentation
 
-### Docker Compose
-
-Run LuckPerms API locally:
-
-```bash
-docker-compose up -d
-```
-
-This starts:
-- LuckPerms REST API on `http://localhost:8080`
-- PostgreSQL on `localhost:5432`
-
-### Generate Tool
-
-Bootstrap Terraform configuration from existing LuckPerms state:
-
-```bash
-go run ./tools/generate \
-  --url http://localhost:8080 \
-  --api-key optional-key \
-  --output ./generated/
-```
-
-This creates `.tf` files with all current groups, permissions, and tracks.
-
-## Resources
-
-See [docs/](docs/) for detailed resource and data source documentation.
+Full resource and data source documentation: [`docs/`](docs/)
 
 ## License
 
-MPL-2.0
+[MPL-2.0](LICENSE)
