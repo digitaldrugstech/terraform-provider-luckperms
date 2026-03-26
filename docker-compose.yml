@@ -2,7 +2,7 @@ services:
   luckperms:
     image: ghcr.io/luckperms/rest-api
     ports:
-      - "9094:8080"
+      - "9094:8080"  # Host port 9094 to avoid conflicts. CI uses 8080:8080 directly.
     environment:
       LUCKPERMS_STORAGE_METHOD: h2
       LUCKPERMS_REST_AUTH: "false"

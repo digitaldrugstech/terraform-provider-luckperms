@@ -533,3 +533,86 @@ func TestCreateTrack_PatchFails_CleanupFails(t *testing.T) {
 		t.Errorf("expected 'cleanup also failed' in error, got: %v", err)
 	}
 }
+
+func TestLockGroup_SerializesSameGroup(t *testing.T) {
+	c := &Client{}
+	unlock1 := c.LockGroup("admin")
+
+	locked := make(chan bool, 1)
+	go func() {
+		unlock2 := c.LockGroup("admin")
+		locked <- true
+		unlock2()
+	}()
+
+	// Goroutine should be blocked
+	select {
+	case <-locked:
+		t.Fatal("second lock should be blocked while first is held")
+	case <-time.After(50 * time.Millisecond):
+		// expected
+	}
+
+	unlock1()
+
+	// Now second lock should acquire
+	select {
+	case <-locked:
+		// expected
+	case <-time.After(time.Second):
+		t.Fatal("second lock should have acquired after first was released")
+	}
+}
+
+func TestLockGroup_IndependentGroups(t *testing.T) {
+	c := &Client{}
+	unlock1 := c.LockGroup("admin")
+
+	locked := make(chan bool, 1)
+	go func() {
+		unlock2 := c.LockGroup("player") // different group
+		locked <- true
+		unlock2()
+	}()
+
+	select {
+	case <-locked:
+		// expected — different groups don't block each other
+	case <-time.After(time.Second):
+		t.Fatal("different groups should not block each other")
+	}
+
+	unlock1()
+}
+
+func TestAPIError_Truncation(t *testing.T) {
+	short := &APIError{StatusCode: 400, Body: "short", Method: "GET", Path: "/test"}
+	if !strings.Contains(short.Error(), "short") {
+		t.Error("short body should appear in full")
+	}
+
+	long := &APIError{StatusCode: 500, Body: strings.Repeat("x", 300), Method: "GET", Path: "/test"}
+	msg := long.Error()
+	if !strings.HasSuffix(msg, "...") {
+		t.Error("long body should be truncated with ...")
+	}
+	// Body part should be ~203 chars (200 + "...")
+	if strings.Count(msg, "x") > 200 {
+		t.Errorf("body should be truncated to 200 chars, got %d x's", strings.Count(msg, "x"))
+	}
+}
+
+func TestSetGroupNodes_NilCoercion(t *testing.T) {
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body json.RawMessage
+		json.NewDecoder(r.Body).Decode(&body)
+		if string(body) != "[]" {
+			t.Errorf("expected empty array [], got %s", string(body))
+		}
+		w.WriteHeader(200)
+	}))
+
+	if err := c.SetGroupNodes(context.Background(), "test", nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

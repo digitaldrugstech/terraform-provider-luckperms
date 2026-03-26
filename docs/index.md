@@ -74,6 +74,14 @@ The provider requires the LuckPerms REST API to be running and accessible. Ensur
 
 The provider will validate the connection during initialization by performing a health check.
 
+## Prerequisites
+
+The provider requires a running [LuckPerms REST API](https://github.com/LuckPerms/rest-api) instance. Quick start with Docker:
+
+    docker run -d -p 8080:8080 -e LUCKPERMS_STORAGE_METHOD=h2 ghcr.io/luckperms/rest-api
+
+For production setups, see the [LuckPerms REST API documentation](https://luckperms.net/wiki/REST-API).
+
 ## Resource Model
 
 The provider uses two complementary resources to manage groups:
@@ -121,7 +129,9 @@ resource "luckperms_group_nodes" "admin" {
 
 ### Using the Generate Tool
 
-If you have an existing LuckPerms instance, bootstrap your Terraform configuration:
+If you have an existing LuckPerms instance, bootstrap your Terraform configuration.
+
+Download `luckperms-generate` from [GitHub Releases](https://github.com/digitaldrugstech/terraform-provider-luckperms/releases) (no Go required), or run from source:
 
 ```bash
 go run ./tools/generate \

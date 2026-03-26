@@ -2,7 +2,7 @@ terraform {
   required_providers {
     luckperms = {
       source  = "digitaldrugstech/luckperms"
-      version = "~> 1.0"
+      version = "~> 0.1"
     }
   }
 }

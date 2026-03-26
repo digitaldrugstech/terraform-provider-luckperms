@@ -99,6 +99,8 @@ resource "luckperms_group_nodes" "vip" {
 }
 ```
 
+> **Note:** Static Unix timestamps cause perpetual drift once the node expires. Temporary permissions are generally better managed outside Terraform (web editor, API, or in-game commands).
+
 ### Negated Permissions
 
 ```terraform

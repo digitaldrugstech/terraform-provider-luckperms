@@ -23,13 +23,12 @@ data "luckperms_track" "staff" {
   name = "staff"
 }
 
-# Add a new group to the end of the track
-resource "luckperms_track" "staff_updated" {
-  name = "staff"
-  groups = concat(
-    data.luckperms_track.staff.groups,
-    ["senior_admin"]
-  )
+output "staff_track_groups" {
+  value = data.luckperms_track.staff.groups
+}
+
+output "staff_track_length" {
+  value = length(data.luckperms_track.staff.groups)
 }
 ```
 
