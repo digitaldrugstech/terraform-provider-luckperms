@@ -1,15 +1,13 @@
+<h1 align="center">terraform-provider-luckperms</h1>
+
 <p align="center">
-  <img src="https://luckperms.net/assets/logo.svg" alt="LuckPerms" width="80" height="80">
-  <br>
-  <strong>Terraform Provider for LuckPerms</strong>
-  <br>
-  Declarative management of Minecraft server permissions via Infrastructure as Code.
+Declarative management of Minecraft server permissions via Infrastructure as Code.
 </p>
 
 <p align="center">
-  <a href="https://github.com/digitaldrugstech/terraform-provider-luckperms/actions"><img src="https://github.com/digitaldrugstech/terraform-provider-luckperms/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
-  <a href="https://github.com/digitaldrugstech/terraform-provider-luckperms/releases"><img src="https://img.shields.io/github/v/release/digitaldrugstech/terraform-provider-luckperms" alt="Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/digitaldrugstech/terraform-provider-luckperms" alt="License"></a>
+  <a href="https://github.com/digitaldrugstech/terraform-provider-luckperms/actions/workflows/test.yml"><img src="https://github.com/digitaldrugstech/terraform-provider-luckperms/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-blue" alt="License: MPL-2.0"></a>
+  <a href="https://github.com/digitaldrugstech/terraform-provider-luckperms"><img src="https://img.shields.io/badge/terraform-provider-purple" alt="Terraform Provider"></a>
 </p>
 
 ---
