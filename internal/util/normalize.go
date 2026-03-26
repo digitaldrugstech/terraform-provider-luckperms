@@ -15,7 +15,7 @@ func NormalizeNodes(nodes []client.Node) []client.Node {
 	result := make([]client.Node, len(nodes))
 	for i, n := range nodes {
 		result[i] = client.Node{
-			Key:     n.Key,
+			Key:     UnescapeNodeKey(n.Key),
 			Value:   n.Value,
 			Context: NormalizeContexts(n.Context),
 			Expiry:  n.Expiry,
@@ -147,6 +147,13 @@ func expirySortKey(e *int64) int64 {
 		return math.MinInt64
 	}
 	return *e
+}
+
+// UnescapeNodeKey removes backslash-escaping that LuckPerms REST API applies
+// to dots inside node key values. The API stores "prefix.100.<lang:murchat\.role\.admin>"
+// but the canonical form (what users write) is "prefix.100.<lang:murchat.role.admin>".
+func UnescapeNodeKey(key string) string {
+	return strings.ReplaceAll(key, "\\.", ".")
 }
 
 func expiryEqual(a, b *int64) bool {

@@ -54,7 +54,7 @@ func ParseMetaNodes(nodes []client.Node) MetaAttrs {
 	for _, n := range nodes {
 		switch {
 		case strings.HasPrefix(n.Key, "displayname.") && !attrs.HasDisplayName:
-			attrs.DisplayName = strings.TrimPrefix(n.Key, "displayname.")
+			attrs.DisplayName = unescapeDots(strings.TrimPrefix(n.Key, "displayname."))
 			attrs.HasDisplayName = true
 		case strings.HasPrefix(n.Key, "weight.") && !attrs.HasWeight:
 			if w, err := strconv.ParseInt(strings.TrimPrefix(n.Key, "weight."), 10, 64); err == nil {
@@ -62,10 +62,10 @@ func ParseMetaNodes(nodes []client.Node) MetaAttrs {
 				attrs.HasWeight = true
 			}
 		case strings.HasPrefix(n.Key, "prefix.") && !attrs.HasPrefix:
-			attrs.Prefix = strings.TrimPrefix(n.Key, "prefix.")
+			attrs.Prefix = unescapeDots(strings.TrimPrefix(n.Key, "prefix."))
 			attrs.HasPrefix = true
 		case strings.HasPrefix(n.Key, "suffix.") && !attrs.HasSuffix:
-			attrs.Suffix = strings.TrimPrefix(n.Key, "suffix.")
+			attrs.Suffix = unescapeDots(strings.TrimPrefix(n.Key, "suffix."))
 			attrs.HasSuffix = true
 		}
 	}
@@ -105,6 +105,11 @@ func BuildMetaNodes(displayName *string, weight int64, prefix *string, suffix *s
 	}
 
 	return nodes
+}
+
+// unescapeDots removes backslash-escaped dots that LuckPerms REST API adds.
+func unescapeDots(s string) string {
+	return strings.ReplaceAll(s, "\\.", ".")
 }
 
 // MergeNodes combines meta nodes and permission nodes into a single set.

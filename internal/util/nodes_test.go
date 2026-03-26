@@ -94,6 +94,23 @@ func TestParseMetaNodes(t *testing.T) {
 	}
 }
 
+func TestParseMetaNodes_EscapedPrefix(t *testing.T) {
+	nodes := []client.Node{
+		{Key: `prefix.900.<hover:show_text:'<lang:murchat\.role\.admin>'>⭐</hover>`, Value: true},
+		{Key: `displayname.Тест\.имя`, Value: true},
+	}
+
+	attrs := ParseMetaNodes(nodes)
+
+	expectedPrefix := `900.<hover:show_text:'<lang:murchat.role.admin>'>⭐</hover>`
+	if attrs.Prefix != expectedPrefix {
+		t.Errorf("prefix: got %q, want %q", attrs.Prefix, expectedPrefix)
+	}
+	if attrs.DisplayName != "Тест.имя" {
+		t.Errorf("display_name: got %q, want %q", attrs.DisplayName, "Тест.имя")
+	}
+}
+
 func TestParseMetaNodes_NoMeta(t *testing.T) {
 	nodes := []client.Node{
 		{Key: "some.perm", Value: true},

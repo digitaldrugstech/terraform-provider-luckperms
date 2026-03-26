@@ -151,6 +151,45 @@ func TestNodesEqual_SameAfterNormalization(t *testing.T) {
 	}
 }
 
+func TestUnescapeNodeKey(t *testing.T) {
+	tests := []struct {
+		input, want string
+	}{
+		{`prefix.100.<hover:show_text:'<lang:murchat\.role\.admin>'>⭐</hover>`, `prefix.100.<hover:show_text:'<lang:murchat.role.admin>'>⭐</hover>`},
+		{`displayname.Без проходки`, `displayname.Без проходки`},
+		{`perm.some\.key\.here`, `perm.some.key.here`},
+		{`no.escapes.here`, `no.escapes.here`},
+		{``, ``},
+	}
+	for _, tt := range tests {
+		if got := UnescapeNodeKey(tt.input); got != tt.want {
+			t.Errorf("UnescapeNodeKey(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestNormalizeNodes_UnescapesDots(t *testing.T) {
+	nodes := []client.Node{
+		{Key: `prefix.100.<lang:murchat\.role\.admin>`, Value: true},
+	}
+	result := NormalizeNodes(nodes)
+	if result[0].Key != `prefix.100.<lang:murchat.role.admin>` {
+		t.Errorf("expected unescaped key, got %q", result[0].Key)
+	}
+}
+
+func TestNodesEqual_EscapedVsUnescaped(t *testing.T) {
+	a := []client.Node{
+		{Key: `prefix.100.<lang:murchat\.role\.admin>`, Value: true},
+	}
+	b := []client.Node{
+		{Key: `prefix.100.<lang:murchat.role.admin>`, Value: true},
+	}
+	if !NodesEqual(a, b) {
+		t.Error("escaped and unescaped should be equal after normalization")
+	}
+}
+
 func TestNodesEqual_DifferentValues(t *testing.T) {
 	a := []client.Node{
 		{Key: "perm", Value: true},
