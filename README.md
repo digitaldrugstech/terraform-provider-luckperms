@@ -5,9 +5,10 @@ Declarative management of Minecraft server permissions via Infrastructure as Cod
 </p>
 
 <p align="center">
+  <a href="https://registry.terraform.io/providers/digitaldrugstech/luckperms/latest"><img src="https://img.shields.io/badge/registry-digitaldrugstech%2Fluckperms-blue?logo=terraform" alt="Terraform Registry"></a>
   <a href="https://github.com/digitaldrugstech/terraform-provider-luckperms/actions/workflows/test.yml"><img src="https://github.com/digitaldrugstech/terraform-provider-luckperms/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/digitaldrugstech/terraform-provider-luckperms/releases/latest"><img src="https://img.shields.io/github/v/release/digitaldrugstech/terraform-provider-luckperms" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-blue" alt="License: MPL-2.0"></a>
-  <a href="https://github.com/digitaldrugstech/terraform-provider-luckperms"><img src="https://img.shields.io/badge/terraform-provider-purple" alt="Terraform Provider"></a>
 </p>
 
 ---
