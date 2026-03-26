@@ -2,6 +2,8 @@ package provider_test
 
 import (
 	"fmt"
+	"net/http"
+	"os"
 	"regexp"
 	"testing"
 
@@ -306,6 +308,90 @@ resource "luckperms_group" "test" {
 					resource.TestCheckResourceAttr("luckperms_group.test", "display_name", "KeepThis"),
 					resource.TestCheckResourceAttr("luckperms_group.test", "weight", "42"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccGroupNodesResource_DeleteWhenGroupGone(t *testing.T) {
+	testAccPreCheck(t)
+	name := randomName("acc_ndgone")
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create group + nodes.
+			{
+				Config: fmt.Sprintf(`
+resource "luckperms_group" "test" {
+  name = %q
+}
+
+resource "luckperms_group_nodes" "test" {
+  group = luckperms_group.test.name
+
+  node {
+    key = "some.perm"
+  }
+}
+`, name),
+				Check: resource.TestCheckResourceAttr("luckperms_group_nodes.test", "node.#", "1"),
+			},
+			// Delete the group externally, then apply empty config.
+			// group_nodes Delete reads current nodes, gets 404, and returns without error.
+			{
+				PreConfig: func() {
+					baseURL := os.Getenv("LUCKPERMS_BASE_URL")
+					req, _ := http.NewRequest(http.MethodDelete, baseURL+"/group/"+name, nil)
+					if apiKey := os.Getenv("LUCKPERMS_API_KEY"); apiKey != "" {
+						req.Header.Set("Authorization", "Bearer "+apiKey)
+					}
+					resp, err := http.DefaultClient.Do(req)
+					if err != nil {
+						t.Fatalf("failed to delete group externally: %v", err)
+					}
+					resp.Body.Close()
+				},
+				Config: `# empty`,
+			},
+		},
+	})
+}
+
+func TestAccGroupNodesResource_ExpiryRoundTrip(t *testing.T) {
+	testAccPreCheck(t)
+	name := randomName("acc_ndexp")
+	// 2000000000 = 2033-05-18, well past any test run.
+	const expiry = 2000000000
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "luckperms_group" "test" {
+  name = %q
+}
+
+resource "luckperms_group_nodes" "test" {
+  group = luckperms_group.test.name
+
+  node {
+    key    = "timed.perm"
+    expiry = %d
+  }
+}
+`, name, expiry),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("luckperms_group_nodes.test", "node.#", "1"),
+					resource.TestCheckResourceAttr("luckperms_group_nodes.test", "node.0.key", "timed.perm"),
+					resource.TestCheckResourceAttr("luckperms_group_nodes.test", "node.0.expiry", fmt.Sprintf("%d", expiry)),
+				),
+			},
+			{
+				ResourceName:                         "luckperms_group_nodes.test",
+				ImportState:                          true,
+				ImportStateId:                        name,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "id",
 			},
 		},
 	})
