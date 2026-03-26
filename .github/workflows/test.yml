@@ -35,9 +35,16 @@ jobs:
         image: ghcr.io/luckperms/rest-api
         ports:
           - 8080:8080
+          - 3001:3001
         env:
           LUCKPERMS_STORAGE_METHOD: h2
           LUCKPERMS_REST_AUTH: "false"
+        options: >-
+          --health-cmd "wget -qO- http://localhost:3001/health || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+          --health-start-period 15s
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
