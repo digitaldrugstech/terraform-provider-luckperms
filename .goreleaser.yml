@@ -1,7 +1,8 @@
 version: 2
 
 builds:
-  - env:
+  - id: provider
+    env:
       - CGO_ENABLED=0
     mod_timestamp: "{{ .CommitTimestamp }}"
     flags:
@@ -17,9 +18,31 @@ builds:
       - arm64
     binary: "{{ .ProjectName }}_v{{ .Version }}"
 
+  - id: generate
+    main: ./tools/generate
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    binary: luckperms-generate
+
 archives:
-  - format: zip
+  - id: provider
+    builds: [provider]
+    format: zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+  - id: generate
+    builds: [generate]
+    format: zip
+    name_template: "luckperms-generate_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"

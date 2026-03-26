@@ -112,7 +112,17 @@ provider "luckperms" {
 
 ## Migrating Existing Permissions
 
-Bootstrap `.tf` files from your current LuckPerms state:
+Bootstrap `.tf` files from your current LuckPerms state.
+
+**Pre-built binary** (no Go required — download from [Releases](https://github.com/digitaldrugstech/terraform-provider-luckperms/releases)):
+
+```bash
+luckperms-generate \
+  --url http://your-luckperms-api:8080 \
+  --output ./luckperms/
+```
+
+**From source** (requires Go):
 
 ```bash
 go run ./tools/generate \
