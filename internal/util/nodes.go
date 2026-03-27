@@ -76,8 +76,8 @@ func ParseMetaNodes(nodes []client.Node) MetaAttrs {
 }
 
 // BuildMetaNodes creates API nodes from group resource attributes.
-// displayName and prefix/suffix are nil when not set.
-func BuildMetaNodes(displayName *string, weight int64, prefix *string, suffix *string) []client.Node {
+// displayName, weight, prefix, and suffix are nil when not set.
+func BuildMetaNodes(displayName *string, weight *int64, prefix *string, suffix *string) []client.Node {
 	var nodes []client.Node
 
 	if displayName != nil {
@@ -87,11 +87,12 @@ func BuildMetaNodes(displayName *string, weight int64, prefix *string, suffix *s
 		})
 	}
 
-	// Always include weight node
-	nodes = append(nodes, client.Node{
-		Key:   fmt.Sprintf("weight.%d", weight),
-		Value: true,
-	})
+	if weight != nil {
+		nodes = append(nodes, client.Node{
+			Key:   fmt.Sprintf("weight.%d", *weight),
+			Value: true,
+		})
+	}
 
 	if prefix != nil {
 		nodes = append(nodes, client.Node{

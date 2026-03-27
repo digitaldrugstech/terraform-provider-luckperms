@@ -29,7 +29,7 @@ func TestFromProviderData_WrongType(t *testing.T) {
 }
 
 func TestFromProviderData_Valid(t *testing.T) {
-	expected := &Client{BaseURL: "http://localhost:8080", APIKey: "key"}
+	expected := &Client{BaseURL: "http://localhost:8080", apiKey: "key"}
 	var diags diag.Diagnostics
 	c := FromProviderData(expected, &diags)
 	if c != expected {

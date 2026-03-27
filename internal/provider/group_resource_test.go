@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
@@ -242,7 +243,8 @@ func TestAccGroupResource_DriftDetection(t *testing.T) {
 					if apiKey := os.Getenv("LUCKPERMS_API_KEY"); apiKey != "" {
 						req.Header.Set("Authorization", "Bearer "+apiKey)
 					}
-					resp, err := http.DefaultClient.Do(req)
+					httpClient := &http.Client{Timeout: 10 * time.Second}
+					resp, err := httpClient.Do(req)
 					if err != nil {
 						t.Fatalf("failed to delete group externally: %v", err)
 					}

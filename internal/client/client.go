@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -16,13 +17,15 @@ import (
 // Client is an HTTP client for the LuckPerms REST API.
 type Client struct {
 	BaseURL    string
-	APIKey     string
+	apiKey     string
 	HTTPClient *http.Client
 	groupMu    sync.Map // map[string]*sync.Mutex — per-group lock for read-merge-write
 }
 
 // New creates a new LuckPerms API client.
 func New(baseURL, apiKey string, timeout time.Duration, insecure bool) *Client {
+	baseURL = strings.TrimRight(baseURL, "/")
+
 	var transport *http.Transport
 	if dt, ok := http.DefaultTransport.(*http.Transport); ok {
 		transport = dt.Clone()
@@ -37,7 +40,7 @@ func New(baseURL, apiKey string, timeout time.Duration, insecure bool) *Client {
 
 	return &Client{
 		BaseURL: baseURL,
-		APIKey:  apiKey,
+		apiKey:  apiKey,
 		HTTPClient: &http.Client{
 			Timeout:   timeout,
 			Transport: transport,
@@ -142,8 +145,8 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/json")
-		if c.APIKey != "" {
-			req.Header.Set("Authorization", "Bearer "+c.APIKey)
+		if c.apiKey != "" {
+			req.Header.Set("Authorization", "Bearer "+c.apiKey)
 		}
 
 		resp, err := c.HTTPClient.Do(req)

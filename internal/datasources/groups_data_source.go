@@ -18,7 +18,8 @@ type GroupsDataSource struct {
 }
 
 type groupsDataSourceModel struct {
-	Names types.List `tfsdk:"names"`
+	ID    types.String `tfsdk:"id"`
+	Names types.List   `tfsdk:"names"`
 }
 
 func NewGroupsDataSource() datasource.DataSource {
@@ -33,6 +34,10 @@ func (d *GroupsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 	resp.Schema = schema.Schema{
 		Description: "List all LuckPerms group names.",
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: "Identifier for this data source.",
+				Computed:    true,
+			},
 			"names": schema.ListAttribute{
 				Description: "All group names.",
 				Computed:    true,
@@ -54,6 +59,7 @@ func (d *GroupsDataSource) Read(ctx context.Context, _ datasource.ReadRequest, r
 	}
 
 	var state groupsDataSourceModel
+	state.ID = types.StringValue("all")
 	state.Names = flattenStringList(ctx, names, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return

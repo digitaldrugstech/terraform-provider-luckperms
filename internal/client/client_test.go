@@ -20,6 +20,17 @@ func testClient(t *testing.T, handler http.Handler) *Client {
 	}
 }
 
+func testClientWithKey(t *testing.T, handler http.Handler, apiKey string) *Client {
+	t.Helper()
+	server := httptest.NewServer(handler)
+	t.Cleanup(server.Close)
+	return &Client{
+		BaseURL:    server.URL,
+		apiKey:     apiKey,
+		HTTPClient: server.Client(),
+	}
+}
+
 func TestHealth_Success(t *testing.T) {
 	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/group" {
@@ -47,15 +58,14 @@ func TestHealth_Failure(t *testing.T) {
 }
 
 func TestAuthorizationHeader(t *testing.T) {
-	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	c := testClientWithKey(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
 		if auth != "Bearer test-key" {
 			t.Errorf("expected 'Bearer test-key', got %q", auth)
 		}
 		w.WriteHeader(200)
 		json.NewEncoder(w).Encode([]string{})
-	}))
-	c.APIKey = "test-key"
+	}), "test-key")
 
 	c.Health(context.Background())
 }
@@ -136,24 +146,16 @@ func TestGetGroup_NotFound(t *testing.T) {
 }
 
 func TestCreateGroup(t *testing.T) {
-	calls := 0
 	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		calls++
-		if calls == 1 {
-			// POST create
-			if r.Method != "POST" {
-				t.Errorf("expected POST, got %s", r.Method)
-			}
-			var req createGroupRequest
-			json.NewDecoder(r.Body).Decode(&req)
-			if req.Name != "newgroup" {
-				t.Errorf("expected newgroup, got %s", req.Name)
-			}
-			json.NewEncoder(w).Encode(Group{Name: "newgroup"})
-		} else {
-			// GET read-back
-			json.NewEncoder(w).Encode(Group{Name: "newgroup"})
+		if r.Method != "POST" {
+			t.Errorf("expected POST, got %s", r.Method)
 		}
+		var req createGroupRequest
+		json.NewDecoder(r.Body).Decode(&req)
+		if req.Name != "newgroup" {
+			t.Errorf("expected newgroup, got %s", req.Name)
+		}
+		json.NewEncoder(w).Encode(Group{Name: "newgroup"})
 	}))
 
 	group, err := c.CreateGroup(context.Background(), "newgroup")
@@ -327,11 +329,18 @@ func TestNew(t *testing.T) {
 	if c.BaseURL != "http://localhost:8080" {
 		t.Error("wrong base url")
 	}
-	if c.APIKey != "key" {
+	if c.apiKey != "key" {
 		t.Error("wrong api key")
 	}
 	if c.HTTPClient.Timeout != 10*time.Second {
 		t.Error("wrong timeout")
+	}
+}
+
+func TestNew_TrimsTrailingSlash(t *testing.T) {
+	c := New("http://localhost:8080/", "key", 10*time.Second, false)
+	if c.BaseURL != "http://localhost:8080" {
+		t.Errorf("expected trailing slash trimmed, got %q", c.BaseURL)
 	}
 }
 

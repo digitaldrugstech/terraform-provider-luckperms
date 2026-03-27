@@ -1,3 +1,9 @@
+variable "luckperms_api_key" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
 terraform {
   required_providers {
     luckperms = {
@@ -9,7 +15,7 @@ terraform {
 
 provider "luckperms" {
   base_url = "http://localhost:8080"
-  api_key  = "your-api-key-here"
+  api_key  = var.luckperms_api_key
   timeout  = 30
   insecure = false
 }

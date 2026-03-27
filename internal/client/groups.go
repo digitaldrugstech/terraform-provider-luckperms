@@ -37,12 +37,16 @@ func (c *Client) GetGroup(ctx context.Context, name string) (*Group, error) {
 
 // CreateGroup creates a new group.
 func (c *Client) CreateGroup(ctx context.Context, name string) (*Group, error) {
-	_, err := c.doRequest(ctx, "POST", "/group", createGroupRequest{Name: name})
+	body, err := c.doRequest(ctx, "POST", "/group", createGroupRequest{Name: name})
 	if err != nil {
 		return nil, fmt.Errorf("creating group %q: %w", name, err)
 	}
 
-	return c.GetGroup(ctx, name)
+	var group Group
+	if err := json.Unmarshal(body, &group); err != nil {
+		return nil, fmt.Errorf("decoding created group: %w", err)
+	}
+	return &group, nil
 }
 
 // DeleteGroup deletes a group by name.
