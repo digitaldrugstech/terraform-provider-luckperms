@@ -142,11 +142,10 @@ func TestParseMetaNodes_WeightZero(t *testing.T) {
 
 func TestBuildMetaNodes_AllSet(t *testing.T) {
 	dn := "Admin"
-	w := int64(500)
 	px := "100.<red>★"
 	sx := "10.[VIP]"
 
-	nodes := BuildMetaNodes(&dn, &w, &px, &sx)
+	nodes := BuildMetaNodes(&dn, 500, &px, &sx)
 
 	if len(nodes) != 4 {
 		t.Fatalf("expected 4 nodes, got %d", len(nodes))
@@ -169,20 +168,10 @@ func TestBuildMetaNodes_AllSet(t *testing.T) {
 }
 
 func TestBuildMetaNodes_OnlyWeight(t *testing.T) {
-	// nil weight should produce 0 nodes
-	nodes := BuildMetaNodes(nil, nil, nil, nil)
-
-	if len(nodes) != 0 {
-		t.Fatalf("expected 0 nodes when all nil, got %d", len(nodes))
-	}
-}
-
-func TestBuildMetaNodes_ExplicitWeightZero(t *testing.T) {
-	w := int64(0)
-	nodes := BuildMetaNodes(nil, &w, nil, nil)
+	nodes := BuildMetaNodes(nil, 0, nil, nil)
 
 	if len(nodes) != 1 {
-		t.Fatalf("expected 1 node (weight only), got %d", len(nodes))
+		t.Fatalf("expected 1 node (weight.0), got %d", len(nodes))
 	}
 	if nodes[0].Key != "weight.0" {
 		t.Errorf("expected weight.0, got %s", nodes[0].Key)
@@ -191,10 +180,9 @@ func TestBuildMetaNodes_ExplicitWeightZero(t *testing.T) {
 
 func TestBuildMetaNodes_Unicode(t *testing.T) {
 	dn := "Без проходки"
-	w := int64(0)
 	px := "0.<gray>?"
 
-	nodes := BuildMetaNodes(&dn, &w, &px, nil)
+	nodes := BuildMetaNodes(&dn, 0, &px, nil)
 
 	if len(nodes) != 3 {
 		t.Fatalf("expected 3 nodes, got %d", len(nodes))

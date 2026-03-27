@@ -80,11 +80,7 @@ func MapMetaToTFValues(meta MetaAttrs) (displayName types.String, weight types.I
 		displayName = types.StringNull()
 	}
 
-	if meta.HasWeight {
-		weight = types.Int64Value(meta.Weight)
-	} else {
-		weight = types.Int64Null()
-	}
+	weight = types.Int64Value(meta.Weight)
 
 	if meta.HasPrefix {
 		prefix = types.StringValue(meta.Prefix)

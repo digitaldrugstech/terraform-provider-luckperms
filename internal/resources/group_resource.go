@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -70,9 +71,10 @@ func (r *GroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:    true,
 			},
 			"weight": schema.Int64Attribute{
-				Description: "Group weight/priority. Higher weight takes precedence when a player has multiple groups. Stored as weight.{value} node.",
+				Description: "Group weight/priority. Higher weight takes precedence when a player has multiple groups. Stored as weight.{value} node. Default: 0.",
 				Optional:    true,
 				Computed:    true,
+				Default:     int64default.StaticInt64(0),
 			},
 			"prefix": schema.StringAttribute{
 				Description: "Chat prefix in format {priority}.{text}. Priority determines which group's prefix displays when a player has multiple groups. Example: \"100.<#f1c40f>⭐\". Uses MiniMessage formatting.",
@@ -242,11 +244,7 @@ func buildMetaNodesFromPlan(plan *groupResourceModel) []client.Node {
 		displayName = &v
 	}
 
-	var weight *int64
-	if !plan.Weight.IsNull() && !plan.Weight.IsUnknown() {
-		v := plan.Weight.ValueInt64()
-		weight = &v
-	}
+	weight := plan.Weight.ValueInt64()
 
 	var prefix *string
 	if !plan.Prefix.IsNull() && !plan.Prefix.IsUnknown() {
